@@ -1,0 +1,42 @@
+#!/bin/bash
+
+function extract_file() {
+    if [[ $1 =~ .*zip$ ]]; then
+        echo "Unzipping file ${1}"
+        unzip $1
+    elif [[ $1 =~ .*tar.gz$ ]]; then
+        echo "Untar file ${1}"
+        tar zxvf $1
+    fi
+    return 0
+}
+
+function install() {
+    if [[ -z ${TAG} ]] || [[ ${TAG} == "latest" ]]; then
+        VERSION=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/latest" | jq -r .tag_name)
+        DOWN_URL=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/latest" | jq -r '.assets[] | .browser_download_url' | grep -e ".*x86.*disable-wallet.*")
+        echo "Pulling latest release"
+    else
+        VERSION=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/tags/${TAG}" | jq -r .tag_name)
+        DOWN_URL=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/tags/${TAG}" | jq -r '.assets[] | .browser_download_url' | grep -e ".*x86.*disable-wallet.*")
+        echo "Pulling release ${TAG}"
+    fi
+
+    cd /tmp
+    wget $DOWN_URL
+    local zip_file=$(find . -type f -name '*.zip' 2>/dev/null)
+    extract_file ${zip_file}
+    local targz_file=$(find ./linux-disable-wallet/ -type f -name '*.tar.gz' 2>/dev/null)
+    extract_file ${targz_file}
+    mv $(find . -type d -name 'raven*' 2>/dev/null) /opt/raven
+    ln -sf /opt/raven/bin/ravend /usr/local/bin/ravend
+    ln -sf /opt/raven/bin/raven-cli /usr/local/bin/raven-cli
+
+    local raven_dir=/home/kingofthenorth/.raven
+    mkdir -p ${raven_dir}
+    chown -R kingofthenorth:kingofthenorth ${raven_dir}
+
+    rm -rf /tmp/*
+}
+
+$1

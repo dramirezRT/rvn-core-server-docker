@@ -1,0 +1,14 @@
+#!/bin/bash 
+count=$(raven-cli getblockcount)
+echo "block count: $count"
+
+hash=$(raven-cli getblockhash $count)
+echo "block hash: $hash"
+
+t=$(raven-cli getblock "$hash" | grep '"time"' | awk '{print $2}' | sed -e 's/,$//g')
+echo "block timestamp is: $t"
+
+cur_t=$(date +%s); 
+diff_t=$[$cur_t - $t]; 
+echo -n "Difference is: "
+echo $diff_t | awk '{printf "%d days, %d:%d:%d\n",$1/(60*60*24),$1/(60*60)%24,$1%(60*60)/60,$1%60}'
