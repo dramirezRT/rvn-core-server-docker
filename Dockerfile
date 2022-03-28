@@ -22,6 +22,7 @@ RUN rm -f /usr/local/bin/raven_init
 VOLUME [ "/home/kingofthenorth/.raven" ]
 RUN chown -R kingofthenorth:kingofthenorth /home/kingofthenorth/.raven
 COPY ./files/raven.conf /home/kingofthenorth/.raven
+COPY ./files/raven.conf /root/.raven
 
 USER kingofthenorth
 WORKDIR /home/kingofthenorth
