@@ -25,4 +25,4 @@ WORKDIR /home/kingofthenorth
 
 EXPOSE 8767
 
-CMD ravend
+ENTRYPOINT ravend
