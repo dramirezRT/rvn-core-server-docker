@@ -74,7 +74,7 @@ function install_rvn() {
 }
 
 function node_status() {
-    local bootstrap_file="~/bootstrap-status.log"
+    local bootstrap_file="/home/kingofthenorth/bootstrap-status.log"
     if [ -f $bootstrap_file ]; then
         cat $bootstrap_file
     fi
