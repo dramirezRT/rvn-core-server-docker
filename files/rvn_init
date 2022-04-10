@@ -1,17 +1,51 @@
 #!/bin/bash
 
 function extract_file() {
+    local extraction_dir="./"
+    if [ -n "$2" ]; then
+        extraction_dir="$2"
+    fi
+
     if [[ $1 =~ .*zip$ ]]; then
         echo "Unzipping file ${1}"
-        unzip $1
+        unzip $1 -d ${extraction_dir} || return 1
     elif [[ $1 =~ .*tar.gz$ ]]; then
         echo "Untar file ${1}"
-        tar zxvf $1
+        tar zxf $1 -C ${extraction_dir} || return 1
     fi
     return 0
 }
 
-function install() {
+function bootstrap_node() {
+    local extraction_dir=/home/kingofthenorth/.raven/
+    while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz" | awk '{print $5}')" = "Done" ];
+    do
+        echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > ~/bootstrap-status.log
+        echo -e "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz")" >> ~/bootstrap-status.log
+        sleep 60
+    done
+
+    local bootstrap_file=$(find -type f -name "rvn-bootstrap*.tar.gz")
+    if [ -z "${bootstrap_file}" ]; then
+        echo -e "$(date) - ERROR: Failed to find the downloaded bootstrap file!" > ~/bootstrap-status.log
+        return 1
+    fi
+
+    echo -e "$(date) - Extracting the bootstrap file database..." > ~/bootstrap-status.log
+    extract_file $bootstrap_file $extraction_dir || { echo -e "Failed to extract the bootstrap database..." > ~/bootstrap-status.log && return 1; }
+
+    echo -e "$(date) - Extraction of the bootstrap file completed succesfully!" > ~/bootstrap-status.log
+    return 0
+}
+
+function setup_nodejs(){
+    local app_dir=/home/kingofthenorth/nodejs-app/
+    cd ${app_dir}
+    npm i
+    return 0
+}
+
+function install_rvn() {
     if [[ -z ${TAG} ]] || [[ ${TAG} == "latest" ]]; then
         VERSION=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/latest" | jq -r .tag_name)
         DOWN_URL=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/latest" | jq -r '.assets[] | .browser_download_url' | grep -e ".*x86.*disable-wallet.*")
@@ -32,11 +66,33 @@ function install() {
     ln -sf /opt/raven/bin/ravend /usr/local/bin/ravend
     ln -sf /opt/raven/bin/raven-cli /usr/local/bin/raven-cli
 
-    local raven_dir=/home/kingofthenorth/.raven
+    local raven_dir=/home/kingofthenorth/.raven/
     mkdir -p ${raven_dir}
     chown -R kingofthenorth:kingofthenorth ${raven_dir}
 
     rm -rf /tmp/*
+}
+
+function node_status() {
+    local bootstrap_file="~/bootstrap-status.log"
+    if [ -f $bootstrap_file ]; then
+        cat $bootstrap_file
+    fi
+    local ravend_pid=$(ps aux | grep ravend | grep -v grep)
+    if [ -n "${ravend_pid}" ]; then
+        raven_status
+    fi
+    return 0
+}
+
+function init() {
+    local app_dir=/home/kingofthenorth/nodejs-app/
+    setup_nodejs || return 1
+    cd $app_dir && node index.js &
+    transmission-daemon && sleep 60
+
+    bootstrap_node || return 2
+    ravend || return 3
 }
 
 $1

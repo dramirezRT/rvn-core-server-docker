@@ -1,0 +1,3 @@
+[submodule "rvn-node-frontend-docker"]
+	path = rvn-node-frontend-docker
+	url = https://github.com/dramirezRT/rvn-node-frontend-docker.git
