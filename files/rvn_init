@@ -25,7 +25,7 @@ function bootstrap_node() {
         sleep 60
     done
 
-    local bootstrap_file=$(find -type f -name "rvn-bootstrap*.tar.gz")
+    local bootstrap_file=$(find /home/kingofthenorth -type f -name "rvn-bootstrap*.tar.gz")
     if [ -z "${bootstrap_file}" ]; then
         echo -e "$(date) - ERROR: Failed to find the downloaded bootstrap file!" > ~/bootstrap-status.log
         return 1
