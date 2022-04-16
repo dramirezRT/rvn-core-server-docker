@@ -17,7 +17,8 @@ function extract_file() {
 }
 
 function bootstrap_node() {
-    local extraction_dir=/home/kingofthenorth/.raven/
+    local download_dir=/kingofthenorth/bootstrap-seed/
+    local extraction_dir=/kingofthenorth/raven-dir/
     while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz" | awk '{print $5}')" = "Done" ];
     do
         echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > ~/bootstrap-status.log
@@ -25,7 +26,7 @@ function bootstrap_node() {
         sleep 60
     done
 
-    local bootstrap_file=$(find /home/kingofthenorth -type f -name "rvn-bootstrap*.tar.gz")
+    local bootstrap_file=$(find ${download_dir} -type f -name "rvn-bootstrap*tar.gz")
     if [ -z "${bootstrap_file}" ]; then
         echo -e "$(date) - ERROR: Failed to find the downloaded bootstrap file!" > ~/bootstrap-status.log
         return 1
@@ -86,12 +87,15 @@ function node_status() {
 }
 
 function init() {
+    # Start node front-end
     local app_dir=/home/kingofthenorth/nodejs-app/
     setup_nodejs || return 1
     cd $app_dir && node index.js &
-    transmission-daemon && sleep 60
-
-    bootstrap_node || return 2
+    # Setup transmission for bootstrap file
+    transmission-daemon && sleep 30
+    # Start bootstraping the node
+    bootstrap_node || { sleep 600 && return 2; }
+    # Start ravencoin daemon
     ravend || return 3
 }
 

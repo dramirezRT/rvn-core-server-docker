@@ -12,9 +12,11 @@ RUN apt-get -qq update && apt-get install -qq -y \
 RUN useradd -ms /bin/bash kingofthenorth
 
 VOLUME [ "/home/kingofthenorth/" ]
+VOLUME [ "/kingofthenorth/" ]
 
-COPY --chown=kingofthenorth:kingofthenorth ./files/rvn_init /usr/local/bin/raven_init
-COPY --chown=kingofthenorth:kingofthenorth ./files/raven_status /usr/local/bin/raven_status
+COPY ./files/rvn_init /usr/local/bin/raven_init
+COPY ./files/raven_status /usr/local/bin/raven_status
+COPY ./files/entrypoint /usr/local/bin/entrypoint
 
 ENV TAG latest
 
@@ -22,9 +24,9 @@ ENV TAG latest
 RUN chmod +x /usr/local/bin/raven_init && \
     /usr/local/bin/raven_init install_rvn
 RUN chmod +x /usr/local/bin/raven_status
+RUN chmod +x /usr/local/bin/entrypoint
 
 COPY --chown=kingofthenorth:kingofthenorth ./files/raven.conf /home/kingofthenorth/.raven/
-# COPY ./files/raven.conf /root/.raven
 
 # Setup transmission-client
 RUN mkdir -p /home/kingofthenorth/.config/transmission-daemon/seeding
@@ -36,14 +38,12 @@ COPY --chown=kingofthenorth:kingofthenorth ./files/rvn-bootstrap.tar.gz.torrent 
 # Setup nodejs app
 COPY --chown=kingofthenorth:kingofthenorth ./rvn-node-frontend-docker /home/kingofthenorth/nodejs-app/
 
-# RUN chown -R kingofthenorth:kingofthenorth /home/kingofthenorth/
-
-USER kingofthenorth
+#USER kingofthenorth
 WORKDIR /home/kingofthenorth
 
-EXPOSE 8767
-EXPOSE 51413/tcp
-EXPOSE 51413/udp
+EXPOSE 38767
+EXPOSE 31413/tcp
+EXPOSE 31413/udp
 EXPOSE 8080
 
-ENTRYPOINT /usr/local/bin/raven_init init
+ENTRYPOINT /usr/local/bin/entrypoint "/usr/local/bin/raven_init init"

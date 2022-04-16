@@ -1,0 +1,7 @@
+#!/bin/bash
+
+mkdir -p /kingofthenorth/bootstrap-seed/
+mkdir -p /kingofthenorth/raven-dir/
+chown -R kingofthenorth:kingofthenorth /kingofthenorth/
+
+su -c "$@" kingofthenorth
