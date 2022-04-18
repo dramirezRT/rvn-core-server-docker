@@ -13,18 +13,31 @@ or
 ```
     docker build -t <repo-name>:<tag>
 ```
+## What it does?
+The built container will be in charge of:
+1. Downloading and sharing the Ravencoin bootstrap file.
+2. Install and setup the Raven Core node
+3. Run a simple website to monitor the node status
 
 ## Usage
 Pre-built image based from this repo's tags can be found here [https://hub.docker.com/repository/docker/dramirezrt/ravencoin-core-server](https://hub.docker.com/repository/docker/dramirezrt/ravencoin-core-server)
 
 And can be pulled and ran with:
 ```
-    docker run -d -p 8767:8767 dramirezrt/ravencoin-core-server:latest
+docker run -d \
+            -v ~/raven-node/kingofthenorth/:/kingofthenorth \
+            -v /home/kingofthenorth \
+            -p 31413:31413/tcp \
+            -p 31413:31413/udp \
+            -p 38767:38767 \
+            -p 8080:8080 \
+            --name rvn-node dramirezrt/ravencoin-core-server:latest
 ```
 
 I included the ravend help output to have it handy for any additional/special configuration for flags, available at [https://github.com/dramirezRT/rvn-core-server-docker/blob/main/ravend-help.log](https://github.com/dramirezRT/rvn-core-server-docker/blob/main/ravend-help.log)
 
+
 ### For donations
-RVN address: RBvMDKvuvhy9MSsbs8TsSEiZ5vmqe9XDSh
+RVN address: RFxiRVE8L7MHVYfNP2X9eMMKUPk83uYfpZ
 
 FLUX address: t1ZsWHkFRfutSMCY1KPyk35k2pkNJ2GPjPU
