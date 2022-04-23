@@ -16,10 +16,6 @@ function extract_file() {
     return 0
 }
 
-function verify_bootstrap_md5() {
-
-}
-
 function bootstrap_node() {
     local download_dir=/kingofthenorth/bootstrap-seed/
     local extraction_dir=/kingofthenorth/raven-dir/
