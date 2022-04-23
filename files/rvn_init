@@ -16,9 +16,14 @@ function extract_file() {
     return 0
 }
 
+function verify_bootstrap_md5() {
+
+}
+
 function bootstrap_node() {
     local download_dir=/kingofthenorth/bootstrap-seed/
     local extraction_dir=/kingofthenorth/raven-dir/
+    local transmission_dir=~/.config/transmission-daemon/
     while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz" | awk '{print $5}')" = "Done" ];
     do
         echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > ~/bootstrap-status.log
@@ -31,6 +36,14 @@ function bootstrap_node() {
         echo -e "$(date) - ERROR: Failed to find the downloaded bootstrap file!" > ~/bootstrap-status.log
         return 1
     fi
+
+    cp ${transmission_dir}/seeding/rvn-bootstrap.md5 ${download_dir}
+    pushd $download_dir
+    if ! md5sum -c rvn-bootstrap.md5 --status --ignore-missing; then
+        echo -e "$(date) - ERROR: Failed to verify the MD5 checksum of the downloaded bootstrap file!" > ~/bootstrap-status.log
+        return 1
+    fi
+    popd
 
     echo -e "$(date) - Extracting the bootstrap file database..." > ~/bootstrap-status.log
     extract_file $bootstrap_file $extraction_dir || { echo -e "Failed to extract the bootstrap database..." > ~/bootstrap-status.log && return 1; }
@@ -86,11 +99,23 @@ function node_status() {
     return 0
 }
 
+function check_env_vars() {
+    if [ "${UPNP}" = "true" ]; then
+        echo "Enabling UPNP on services..."
+        sed -i -e '/upnp=/ s/=.*/=1/' /home/kingofthenorth/.raven/raven.conf
+        sed -i -e '/\"port-forwarding-enabled\":/ s/:.*/: true,/' /home/kingofthenorth/.config/transmission-daemon/settings.json
+    fi
+}
+
 function init() {
     # Start node front-end
     local app_dir=/home/kingofthenorth/nodejs-app/
     setup_nodejs || return 1
-    cd $app_dir && node index.js &
+    pushd $app_dir 
+    node index.js &
+    popd
+    # Check for environment variables
+    check_env_vars
     # Setup transmission for bootstrap file
     transmission-daemon && sleep 30
     # Start bootstraping the node
