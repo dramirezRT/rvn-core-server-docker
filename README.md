@@ -22,7 +22,7 @@ The built container will be in charge of:
 ## Usage
 Pre-built image based from this repo's tags can be found here [https://hub.docker.com/repository/docker/dramirezrt/ravencoin-core-server](https://hub.docker.com/repository/docker/dramirezrt/ravencoin-core-server)
 
-And can be pulled and ran with:
+## Normal usage
 ```
 docker run -d \
             -v ~/raven-node/kingofthenorth/:/kingofthenorth \
@@ -31,6 +31,29 @@ docker run -d \
             -p 31413:31413/udp \
             -p 38767:38767 \
             -p 8080:8080 \
+            --name rvn-node dramirezrt/ravencoin-core-server:latest
+```
+
+## UPNP enabled
+```
+docker run -d \
+            -v ~/raven-node/kingofthenorth/:/kingofthenorth \
+            -v /home/kingofthenorth \
+            -e UPNP=true \
+            --net=host \
+            --name rvn-node dramirezrt/ravencoin-core-server:latest
+```
+
+## Custom port setting
+```
+docker run -d \
+            -v ~/raven-node/kingofthenorth/:/kingofthenorth \
+            -v /home/kingofthenorth \
+            -e UPNP=true \
+            -e RAVEN_PORT=8767 \
+            -e TRANSMISSION_PORT=51413 \
+            -e FRONTEND_PORT=8069 \
+            --net=host \
             --name rvn-node dramirezrt/ravencoin-core-server:latest
 ```
 
