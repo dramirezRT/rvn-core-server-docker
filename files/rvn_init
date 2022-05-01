@@ -101,17 +101,29 @@ function check_env_vars() {
         sed -i -e '/upnp=/ s/=.*/=1/' /home/kingofthenorth/.raven/raven.conf
         sed -i -e '/\"port-forwarding-enabled\":/ s/:.*/: true,/' /home/kingofthenorth/.config/transmission-daemon/settings.json
     fi
+    if [ -n "${RAVEN_PORT}" ]; then
+        echo "Setting up custom RVN Core port ${RAVEN_PORT}..."
+        sed -i -e "/port=/ s/=.*/=${RAVEN_PORT}/" /home/kingofthenorth/.raven/raven.conf
+    fi
+    if [ -n "${TRANSMISSION_PORT}" ]; then
+        echo "Setting up custom Transmission port ${TRANSMISSION_PORT}..."
+        sed -i -e "/\"peer-port\":/ s/:.*/: ${TRANSMISSION_PORT},/" /home/kingofthenorth/.config/transmission-daemon/settings.json
+    fi
+    if [ -n "${FRONTEND_PORT}" ]; then
+        echo "Setting up custom Frontend port ${FRONTEND_PORT}..."
+        sed -i -e "/const PORT = / s/=.*/= ${FRONTEND_PORT}/" /home/kingofthenorth/nodejs-app/index.js
+    fi
 }
 
 function init() {
+    # Check for environment variables
+    check_env_vars
     # Start node front-end
     local app_dir=/home/kingofthenorth/nodejs-app/
     setup_nodejs || return 1
     pushd $app_dir 
     node index.js &
     popd
-    # Check for environment variables
-    check_env_vars
     # Setup transmission for bootstrap file
     transmission-daemon && sleep 30
     # Start bootstraping the node
