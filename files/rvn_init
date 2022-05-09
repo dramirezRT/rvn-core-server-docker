@@ -1,5 +1,8 @@
 #!/bin/bash
 
+HOME_DIR=/home/kingofthenorth/
+KOTN_DIR=/kingofthenorth/
+
 function extract_file() {
     local extraction_dir="./"
     if [ -n "$2" ]; then
@@ -17,48 +20,48 @@ function extract_file() {
 }
 
 function bootstrap_node() {
-    local download_dir=/kingofthenorth/bootstrap-seed/
-    local extraction_dir=/kingofthenorth/raven-dir/
-    local transmission_dir=~/.config/transmission-daemon/
+    local download_dir=$KOTN_DIR/bootstrap-seed/
+    local extraction_dir=$KOTN_DIR/raven-dir/
+    local transmission_dir=$HOME_DIR/.config/transmission-daemon/
     local bootstrap_done="bootstrap.done"
     while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz" | awk '{print $5}')" = "Done" ];
     do
-        echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > ~/bootstrap-status.log
-        echo -e "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz")" >> ~/bootstrap-status.log
+        echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > $HOME_DIR/bootstrap-status.log
+        echo -e "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz")" >> $HOME_DIR/bootstrap-status.log
         sleep 60
     done
 
     local bootstrap_file=$(find ${download_dir} -type f -name "rvn-bootstrap*tar.gz")
     if [ -z "${bootstrap_file}" ]; then
-        echo -e "$(date) - ERROR: Failed to find the downloaded bootstrap file!" > ~/bootstrap-status.log
+        echo -e "$(date) - ERROR: Failed to find the downloaded bootstrap file!" > $HOME_DIR/bootstrap-status.log
         return 1
     fi
 
-    echo -e "$(date) - Verifying the bootstrap file integrity..." > ~/bootstrap-status.log
+    echo -e "$(date) - Verifying the bootstrap file integrity..." > $HOME_DIR/bootstrap-status.log
     cp ${transmission_dir}/seeding/rvn-bootstrap.md5 ${download_dir}
     pushd $download_dir &> /dev/null
     if ! md5sum -c rvn-bootstrap.md5 --status --ignore-missing; then
-        echo -e "$(date) - ERROR: Failed to verify the MD5 checksum of the downloaded bootstrap file!" > ~/bootstrap-status.log
+        echo -e "$(date) - ERROR: Failed to verify the MD5 checksum of the downloaded bootstrap file!" > $HOME_DIR/bootstrap-status.log
         popd &> /dev/null
         return 1
     fi
     popd &> /dev/null
 
     if [ -f "${download_dir}/${bootstrap_done}" ]; then
-        echo -e "$(date) - Extraction skipped since file already exists..." > ~/bootstrap-status.log
+        echo -e "$(date) - Extraction skipped since file already exists..." > $HOME_DIR/bootstrap-status.log
         return 0
     fi
 
-    echo -e "$(date) - Extracting the bootstrap file database..." > ~/bootstrap-status.log
-    extract_file $bootstrap_file $extraction_dir || { echo -e "Failed to extract the bootstrap database..." > ~/bootstrap-status.log && return 1; }
+    echo -e "$(date) - Extracting the bootstrap file database..." > $HOME_DIR/bootstrap-status.log
+    extract_file $bootstrap_file $extraction_dir || { echo -e "Failed to extract the bootstrap database..." > $HOME_DIR/bootstrap-status.log && return 1; }
 
-    echo -e "$(date) - Extraction of the bootstrap file completed succesfully!" > ~/bootstrap-status.log
-    touch $bootstrap_done $download_dir
+    echo -e "$(date) - Extraction of the bootstrap file completed succesfully!" > $HOME_DIR/bootstrap-status.log
+    touch $download_dir/$bootstrap_done
     return 0
 }
 
 function setup_nodejs(){
-    local app_dir=/home/kingofthenorth/nodejs-app/
+    local app_dir=$HOME_DIR/nodejs-app/
     cd ${app_dir}
     npm i
     return 0
@@ -85,7 +88,7 @@ function install_rvn() {
     ln -sf /opt/raven/bin/ravend /usr/local/bin/ravend
     ln -sf /opt/raven/bin/raven-cli /usr/local/bin/raven-cli
 
-    local raven_dir=/home/kingofthenorth/.raven/
+    local raven_dir=$HOME_DIR/.raven/
     mkdir -p ${raven_dir}
     chown -R kingofthenorth:kingofthenorth ${raven_dir}
 
@@ -93,22 +96,20 @@ function install_rvn() {
 }
 
 function node_status() {
-    local home_dir="/home/kingofthenorth"
-    local bootstrap_file="${home_dir}/bootstrap-status.log"
+    local bootstrap_file="${HOME_DIR}/bootstrap-status.log"
     if [ -f $bootstrap_file ]; then
         cat $bootstrap_file
     fi
     local ravend_pid=$(ps aux | grep ravend | grep -v grep)
     if [ -n "${ravend_pid}" ]; then
-        local status_file="node_status.log"
+        local status_file="${HOME_DIR}/node_status.log"
         local curr_t=$(date +%s)
         local status_file_t=$(date -r ${status_file} +%s)
         local diff_t=$[$curr_t - $status_file_t]
         if [ $diff_t -gt 60 ]; then
             raven_status > $status_file
-        else
-            cat $status_file
         fi
+        cat $status_file
     fi
     return 0
 }
@@ -116,20 +117,20 @@ function node_status() {
 function check_env_vars() {
     if [ "${UPNP}" = "true" ]; then
         echo "Enabling UPNP on services..."
-        sed -i -e '/upnp=/ s/=.*/=1/' /home/kingofthenorth/.raven/raven.conf
-        sed -i -e '/\"port-forwarding-enabled\":/ s/:.*/: true,/' /home/kingofthenorth/.config/transmission-daemon/settings.json
+        sed -i -e '/upnp=/ s/=.*/=1/' ${HOME_DIR}/.raven/raven.conf
+        sed -i -e '/\"port-forwarding-enabled\":/ s/:.*/: true,/' ${HOME_DIR}/.config/transmission-daemon/settings.json
     fi
     if [ -n "${RAVEN_PORT}" ]; then
         echo "Setting up custom RVN Core port ${RAVEN_PORT}..."
-        sed -i -e "/port=/ s/=.*/=${RAVEN_PORT}/" /home/kingofthenorth/.raven/raven.conf
+        sed -i -e "/port=/ s/=.*/=${RAVEN_PORT}/" ${HOME_DIR}/.raven/raven.conf
     fi
     if [ -n "${TRANSMISSION_PORT}" ]; then
         echo "Setting up custom Transmission port ${TRANSMISSION_PORT}..."
-        sed -i -e "/\"peer-port\":/ s/:.*/: ${TRANSMISSION_PORT},/" /home/kingofthenorth/.config/transmission-daemon/settings.json
+        sed -i -e "/\"peer-port\":/ s/:.*/: ${TRANSMISSION_PORT},/" ${HOME_DIR}/.config/transmission-daemon/settings.json
     fi
     if [ -n "${FRONTEND_PORT}" ]; then
         echo "Setting up custom Frontend port ${FRONTEND_PORT}..."
-        sed -i -e "/const PORT = / s/=.*/= ${FRONTEND_PORT}/" /home/kingofthenorth/nodejs-app/index.js
+        sed -i -e "/const PORT = / s/=.*/= ${FRONTEND_PORT}/" ${HOME_DIR}/nodejs-app/index.js
     fi
 }
 
@@ -137,21 +138,25 @@ function init() {
     # Check for environment variables
     check_env_vars
     # Start node front-end
-    local app_dir=/home/kingofthenorth/nodejs-app/
+    local app_dir=${HOME_DIR}/nodejs-app/
     setup_nodejs || return 1
     pushd $app_dir 
     node index.js &
     popd
+    # Create status file
+    touch $HOME_DIR/node_status.log
     # Setup transmission for bootstrap file
     transmission-daemon && sleep 30
     # Start bootstraping the node
     bootstrap_node || { sleep 600 && return 2; }
     # Start ravencoin daemon
-    local ravend_done="ravend-reindex.done"
+    local ravend_done="${KOTN_DIR}/raven-dir/ravend-reindex.done"
     if [ -f "${ravend_done}" ]; then
+        echo -e "${ravend_done} file found. Running ravend..."
         ravend || return 3
     else
         touch $ravend_done
+        echo -e "${ravend_done} file NOT found. Running ravend and reindexing chain..."
         ravend -reindex || return 4
     fi
 }

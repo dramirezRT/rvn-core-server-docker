@@ -5,9 +5,11 @@ node_ver=$(echo ${net_info} | jq -r '.subversion' | awk -F/ '{print $2}')
 node_ip=$(echo ${net_info} | jq -r '.localaddresses[] | .address')
 node_port=$(echo ${net_info} | jq -r '.localaddresses[] | .port')
 node_score=$(echo ${net_info} | jq -r '.localaddresses[] | .score')
+node_peer_count=$(echo ${net_info} | jq -r '.connections')
 
 echo "Node version: ${node_ver}"
 echo "Node IP/port: ${node_ip}/${node_port}"
+echo "Node Peer Count: ${node_peer_count}"
 echo "Node score: ${node_score}"
 
 count=$(raven-cli getblockcount)
