@@ -24,7 +24,7 @@ function bootstrap_node() {
     local extraction_dir=$KOTN_DIR/raven-dir/
     local transmission_dir=$HOME_DIR/.config/transmission-daemon/
     local bootstrap_done="bootstrap.done"
-    while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz" | awk '{print $5}')" = "Done" ];
+    while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap.*.tar.gz" | awk '{print $5}')" = "Done" ];
     do
         echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > $HOME_DIR/bootstrap-status.log
         echo -e "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz")" >> $HOME_DIR/bootstrap-status.log
@@ -82,7 +82,7 @@ function install_rvn() {
     wget $DOWN_URL
     local zip_file=$(find . -type f -name '*.zip' 2>/dev/null)
     extract_file ${zip_file}
-    local targz_file=$(find ./linux-disable-wallet/ -type f -name '*.tar.gz' 2>/dev/null)
+    local targz_file=$(find . -type f -name 'raven*.tar.gz' 2>/dev/null)
     extract_file ${targz_file}
     mv $(find . -type d -name 'raven*' 2>/dev/null) /opt/raven
     ln -sf /opt/raven/bin/ravend /usr/local/bin/ravend

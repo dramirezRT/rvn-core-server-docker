@@ -33,7 +33,7 @@ RUN mkdir -p /home/kingofthenorth/.config/transmission-daemon/seeding
 
 COPY --chown=kingofthenorth:kingofthenorth ./files/transmission.settings.json /home/kingofthenorth/.config/transmission-daemon/settings.json
 COPY --chown=kingofthenorth:kingofthenorth ./files/rvn-bootstrap.md5 /home/kingofthenorth/.config/transmission-daemon/seeding/
-COPY --chown=kingofthenorth:kingofthenorth ./files/rvn-bootstrap.tar.gz.torrent /home/kingofthenorth/.config/transmission-daemon/seeding/
+COPY --chown=kingofthenorth:kingofthenorth ./files/rvn-bootstrap*.tar.gz.torrent /home/kingofthenorth/.config/transmission-daemon/seeding/
 
 # Setup nodejs app
 COPY --chown=kingofthenorth:kingofthenorth ./rvn-node-frontend-docker /home/kingofthenorth/nodejs-app/
