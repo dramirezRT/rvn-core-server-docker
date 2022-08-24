@@ -27,7 +27,7 @@ function bootstrap_node() {
     while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap.*.tar.gz" | awk '{print $5}')" = "Done" ];
     do
         echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > $HOME_DIR/bootstrap-status.log
-        echo -e "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap*.tar.gz")" >> $HOME_DIR/bootstrap-status.log
+        echo -e "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap.*.tar.gz")" >> $HOME_DIR/bootstrap-status.log
         sleep 60
     done
 
