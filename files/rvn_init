@@ -132,6 +132,10 @@ function check_env_vars() {
         echo "Setting up custom Frontend port ${FRONTEND_PORT}..."
         sed -i -e "/const PORT = / s/=.*/= ${FRONTEND_PORT}/" ${HOME_DIR}/nodejs-app/index.js
     fi
+    if [ -n "${UACOMMENT}" ]; then
+        echo "Setting up custom UACOMMENT to ${UACOMMENT}..."
+        sed -i -e "/uacomment=/ s/=.*/=${UACOMMENT}/" ${HOME_DIR}/.raven/raven.conf
+    fi
 }
 
 function init() {
