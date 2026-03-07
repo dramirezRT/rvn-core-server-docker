@@ -67,34 +67,6 @@ function setup_nodejs(){
     return 0
 }
 
-function install_rvn() {
-    if [[ -z ${TAG} ]] || [[ ${TAG} == "latest" ]]; then
-        VERSION=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/latest" | jq -r .tag_name)
-        DOWN_URL=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/latest" | jq -r '.assets[] | .browser_download_url' | grep -e ".*x86.*disable-wallet.*")
-        echo "Pulling latest release"
-    else
-        VERSION=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/tags/${TAG}" | jq -r .tag_name)
-        DOWN_URL=$(curl --silent "https://api.github.com/repos/RavenProject/Ravencoin/releases/tags/${TAG}" | jq -r '.assets[] | .browser_download_url' | grep -e ".*x86.*disable-wallet.*")
-        echo "Pulling release ${TAG}"
-    fi
-
-    cd /tmp
-    wget $DOWN_URL
-    local zip_file=$(find . -type f -name '*.zip' 2>/dev/null)
-    extract_file ${zip_file}
-    local targz_file=$(find . -type f -name 'raven*.tar.gz' 2>/dev/null)
-    extract_file ${targz_file}
-    mv $(find . -type d -name 'raven*' 2>/dev/null) /opt/raven
-    ln -sf /opt/raven/bin/ravend /usr/local/bin/ravend
-    ln -sf /opt/raven/bin/raven-cli /usr/local/bin/raven-cli
-
-    local raven_dir=$HOME_DIR/.raven/
-    mkdir -p ${raven_dir}
-    chown -R kingofthenorth:kingofthenorth ${raven_dir}
-
-    rm -rf /tmp/*
-}
-
 function node_status() {
     local bootstrap_file="${HOME_DIR}/bootstrap-status.log"
     if [ -f $bootstrap_file ]; then
@@ -104,7 +76,7 @@ function node_status() {
     if [ -n "${ravend_pid}" ]; then
         local status_file="${HOME_DIR}/node_status.log"
         local curr_t=$(date +%s)
-        local status_file_t=$(date -r ${status_file} +%s)
+        local status_file_t=$(date -r ${status_file} +%s 2>/dev/null || echo 0)
         local diff_t=$[$curr_t - $status_file_t]
         if [ $diff_t -gt 60 ]; then
             raven_status > $status_file
@@ -135,6 +107,14 @@ function check_env_vars() {
     if [ -n "${UACOMMENT}" ]; then
         echo "Setting up custom UACOMMENT to ${UACOMMENT}..."
         sed -i -e "/uacomment=/ s/=.*/=${UACOMMENT}/" ${HOME_DIR}/.raven/raven.conf
+    fi
+    if [ -n "${ZMQ_HASHBLOCK_PORT}" ]; then
+        echo "Enabling ZMQ hashblock on port ${ZMQ_HASHBLOCK_PORT}..."
+        sed -i -e "s|# zmqpubhashblock=.*|zmqpubhashblock=tcp://0.0.0.0:${ZMQ_HASHBLOCK_PORT}|" ${HOME_DIR}/.raven/raven.conf
+    fi
+    if [ -n "${ZMQ_HASHTX_PORT}" ]; then
+        echo "Enabling ZMQ hashtx on port ${ZMQ_HASHTX_PORT}..."
+        sed -i -e "s|# zmqpubhashtx=.*|zmqpubhashtx=tcp://0.0.0.0:${ZMQ_HASHTX_PORT}|" ${HOME_DIR}/.raven/raven.conf
     fi
 }
 
