@@ -98,7 +98,7 @@ docker run -d \
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `UPNP` | `false` | Enable UPnP port forwarding (use with `--net=host`) |
-| `RAVEN_PORT` | `38767` | Ravencoin P2P port |
+| `RAVEN_PORT` | `38767` | Ravencoin P2P port (official Ravencoin mainnet port is `8767`) |
 | `TRANSMISSION_PORT` | — | Custom BitTorrent port for bootstrap seeding |
 | `FRONTEND_PORT` | `8080` | Status frontend port |
 | `UACOMMENT` | _(empty)_ | Custom user agent comment for the node |

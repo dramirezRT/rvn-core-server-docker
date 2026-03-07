@@ -85,7 +85,7 @@ COPY --chown=kingofthenorth:kingofthenorth ./rvn-node-frontend-docker /home/king
 WORKDIR /home/kingofthenorth
 
 # P2P
-EXPOSE 8767
+EXPOSE 38767
 # Transmission (bootstrap seeding)
 EXPOSE 31413/tcp
 EXPOSE 31413/udp
