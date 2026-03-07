@@ -21,7 +21,7 @@ RUN git clone --branch ${RAVENCOIN_TAG} --depth 1 \
 WORKDIR /tmp/ravencoin
 
 # Install Berkeley DB 4.8
-RUN ./contrib/install_db4.sh /opt/db4
+RUN mkdir -p /opt/db4 && ./contrib/install_db4.sh /opt/db4
 
 # Build ravend and raven-cli (no GUI, no wallet, with ZMQ + UPnP)
 RUN ./autogen.sh && \
@@ -95,4 +95,4 @@ EXPOSE 8080
 EXPOSE 28332
 EXPOSE 28333
 
-ENTRYPOINT /usr/local/bin/entrypoint "/usr/local/bin/raven_init init"
+ENTRYPOINT ["/usr/local/bin/entrypoint", "/usr/local/bin/raven_init init"]
