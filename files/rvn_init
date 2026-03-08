@@ -108,21 +108,12 @@ function check_env_vars() {
         echo "Setting up custom UACOMMENT to ${UACOMMENT}..."
         sed -i -e "/uacomment=/ s/=.*/=${UACOMMENT}/" ${HOME_DIR}/.raven/raven.conf
     fi
-    if [ -n "${ZMQ_HASHBLOCK_PORT}" ]; then
-        echo "Enabling ZMQ hashblock on port ${ZMQ_HASHBLOCK_PORT}..."
-        sed -i -e "s|# zmqpubhashblock=.*|zmqpubhashblock=tcp://0.0.0.0:${ZMQ_HASHBLOCK_PORT}|" ${HOME_DIR}/.raven/raven.conf
-    fi
-    if [ -n "${ZMQ_HASHTX_PORT}" ]; then
-        echo "Enabling ZMQ hashtx on port ${ZMQ_HASHTX_PORT}..."
-        sed -i -e "s|# zmqpubhashtx=.*|zmqpubhashtx=tcp://0.0.0.0:${ZMQ_HASHTX_PORT}|" ${HOME_DIR}/.raven/raven.conf
-    fi
-    if [ -n "${ZMQ_RAWBLOCK_PORT}" ]; then
-        echo "Enabling ZMQ rawblock on port ${ZMQ_RAWBLOCK_PORT}..."
-        sed -i -e "s|# zmqpubrawblock=.*|zmqpubrawblock=tcp://0.0.0.0:${ZMQ_RAWBLOCK_PORT}|" ${HOME_DIR}/.raven/raven.conf
-    fi
-    if [ -n "${ZMQ_RAWTX_PORT}" ]; then
-        echo "Enabling ZMQ rawtx on port ${ZMQ_RAWTX_PORT}..."
-        sed -i -e "s|# zmqpubrawtx=.*|zmqpubrawtx=tcp://0.0.0.0:${ZMQ_RAWTX_PORT}|" ${HOME_DIR}/.raven/raven.conf
+    if [ "${ZMQ}" = "true" ]; then
+        echo "Enabling ZMQ notifications (hashblock/hashtx on 28332, rawblock/rawtx on 28333)..."
+        sed -i -e "s|# zmqpubhashblock=.*|zmqpubhashblock=tcp://0.0.0.0:28332|" ${HOME_DIR}/.raven/raven.conf
+        sed -i -e "s|# zmqpubhashtx=.*|zmqpubhashtx=tcp://0.0.0.0:28332|" ${HOME_DIR}/.raven/raven.conf
+        sed -i -e "s|# zmqpubrawblock=.*|zmqpubrawblock=tcp://0.0.0.0:28333|" ${HOME_DIR}/.raven/raven.conf
+        sed -i -e "s|# zmqpubrawtx=.*|zmqpubrawtx=tcp://0.0.0.0:28333|" ${HOME_DIR}/.raven/raven.conf
     fi
 }
 

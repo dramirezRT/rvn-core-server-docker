@@ -67,10 +67,7 @@ docker run -d \
 docker run -d \
   -v ~/raven-node/kingofthenorth/:/kingofthenorth \
   -v /home/kingofthenorth \
-  -e ZMQ_HASHBLOCK_PORT=28332 \
-  -e ZMQ_HASHTX_PORT=28333 \
-  -e ZMQ_RAWBLOCK_PORT=28332 \
-  -e ZMQ_RAWTX_PORT=28333 \
+  -e ZMQ=true \
   -p 38767:38767 \
   -p 28332:28332 \
   -p 28333:28333 \
@@ -88,10 +85,7 @@ docker run -d \
   -e RAVEN_PORT=8767 \
   -e TRANSMISSION_PORT=51413 \
   -e FRONTEND_PORT=8069 \
-  -e ZMQ_HASHBLOCK_PORT=28332 \
-  -e ZMQ_HASHTX_PORT=28333 \
-  -e ZMQ_RAWBLOCK_PORT=28332 \
-  -e ZMQ_RAWTX_PORT=28333 \
+  -e ZMQ=true \
   -e UACOMMENT=MyNode \
   --net=host \
   --name rvn-node dramirezrt/ravencoin-core-server:latest
@@ -106,10 +100,7 @@ docker run -d \
 | `TRANSMISSION_PORT` | — | Custom BitTorrent port for bootstrap seeding |
 | `FRONTEND_PORT` | `8080` | Status frontend port |
 | `UACOMMENT` | _(empty)_ | Custom user agent comment for the node |
-| `ZMQ_HASHBLOCK_PORT` | _(disabled)_ | Enable ZMQ hashblock notifications on this port |
-| `ZMQ_HASHTX_PORT` | _(disabled)_ | Enable ZMQ hashtx notifications on this port |
-| `ZMQ_RAWBLOCK_PORT` | _(disabled)_ | Enable ZMQ raw block data notifications on this port |
-| `ZMQ_RAWTX_PORT` | _(disabled)_ | Enable ZMQ raw transaction data notifications on this port |
+| `ZMQ` | `false` | Enable all ZMQ notifications (`hashblock`/`hashtx` on port 28332, `rawblock`/`rawtx` on port 28333) |
 
 ## Exposed Ports
 
@@ -188,22 +179,19 @@ Ravencoin Core v4.6.1 supports ZMQ (ZeroMQ) pub/sub notifications for real-time 
 
 ### Enabling ZMQ
 
-ZMQ topics are **disabled by default**. Enable them by passing the corresponding environment variables:
+ZMQ is **disabled by default**. Enable all topics with a single flag:
 
 ```bash
 docker run -d \
-  -e ZMQ_HASHBLOCK_PORT=28332 \
-  -e ZMQ_HASHTX_PORT=28333 \
-  -e ZMQ_RAWBLOCK_PORT=28332 \
-  -e ZMQ_RAWTX_PORT=28333 \
+  -e ZMQ=true \
   -p 28332:28332 \
   -p 28333:28333 \
   ...
 ```
 
-Multiple topics can share the same port. By convention:
-- **Port 28332** — block-related topics (`hashblock`, `rawblock`)
-- **Port 28333** — transaction-related topics (`hashtx`, `rawtx`)
+This enables all 4 functional topics on fixed ports:
+- **Port 28332** — `hashblock`, `hashtx` (hash-based notifications)
+- **Port 28333** — `rawblock`, `rawtx` (full serialized data)
 
 ### ZMQ Message Format
 
