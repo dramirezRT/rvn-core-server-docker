@@ -116,6 +116,14 @@ function check_env_vars() {
         echo "Enabling ZMQ hashtx on port ${ZMQ_HASHTX_PORT}..."
         sed -i -e "s|# zmqpubhashtx=.*|zmqpubhashtx=tcp://0.0.0.0:${ZMQ_HASHTX_PORT}|" ${HOME_DIR}/.raven/raven.conf
     fi
+    if [ -n "${ZMQ_RAWBLOCK_PORT}" ]; then
+        echo "Enabling ZMQ rawblock on port ${ZMQ_RAWBLOCK_PORT}..."
+        sed -i -e "s|# zmqpubrawblock=.*|zmqpubrawblock=tcp://0.0.0.0:${ZMQ_RAWBLOCK_PORT}|" ${HOME_DIR}/.raven/raven.conf
+    fi
+    if [ -n "${ZMQ_RAWTX_PORT}" ]; then
+        echo "Enabling ZMQ rawtx on port ${ZMQ_RAWTX_PORT}..."
+        sed -i -e "s|# zmqpubrawtx=.*|zmqpubrawtx=tcp://0.0.0.0:${ZMQ_RAWTX_PORT}|" ${HOME_DIR}/.raven/raven.conf
+    fi
 }
 
 function init() {
