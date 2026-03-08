@@ -67,8 +67,7 @@ docker run -d \
 docker run -d \
   -v ~/raven-node/kingofthenorth/:/kingofthenorth \
   -v /home/kingofthenorth \
-  -e ZMQ_HASHBLOCK_PORT=28332 \
-  -e ZMQ_HASHTX_PORT=28333 \
+  -e ZMQ=true \
   -p 38767:38767 \
   -p 28332:28332 \
   -p 28333:28333 \
@@ -86,8 +85,7 @@ docker run -d \
   -e RAVEN_PORT=8767 \
   -e TRANSMISSION_PORT=51413 \
   -e FRONTEND_PORT=8069 \
-  -e ZMQ_HASHBLOCK_PORT=28332 \
-  -e ZMQ_HASHTX_PORT=28333 \
+  -e ZMQ=true \
   -e UACOMMENT=MyNode \
   --net=host \
   --name rvn-node dramirezrt/ravencoin-core-server:latest
@@ -102,8 +100,7 @@ docker run -d \
 | `TRANSMISSION_PORT` | — | Custom BitTorrent port for bootstrap seeding |
 | `FRONTEND_PORT` | `8080` | Status frontend port |
 | `UACOMMENT` | _(empty)_ | Custom user agent comment for the node |
-| `ZMQ_HASHBLOCK_PORT` | _(disabled)_ | Enable ZMQ hashblock notifications on this port |
-| `ZMQ_HASHTX_PORT` | _(disabled)_ | Enable ZMQ hashtx notifications on this port |
+| `ZMQ` | `false` | Enable all ZMQ notifications (`hashblock`/`hashtx` on port 28332, `rawblock`/`rawtx` on port 28333) |
 
 ## Exposed Ports
 
@@ -163,6 +160,29 @@ The `DOCKER_HUB_TOKEN` secret must be set in the repository settings.
 │   REST :38766 (API)                             │
 └─────────────────────────────────────────────────┘
 ```
+
+## ZMQ Notifications
+
+ZMQ is **disabled by default**. Enable all topics with a single flag:
+
+```bash
+docker run -d \
+  -e ZMQ=true \
+  -p 28332:28332 \
+  -p 28333:28333 \
+  ...
+```
+
+| Topic | Port | Verified | Description |
+|-------|------|----------|-------------|
+| `hashblock` | 28332 | ✅ | New block hash |
+| `hashtx` | 28332 | ✅ | New transaction hash |
+| `rawblock` | 28333 | ✅ | Full serialized block |
+| `rawtx` | 28333 | ✅ | Full serialized transaction |
+
+> **Note:** `getzmqnotifications` RPC is not available in Ravencoin Core v4.6.1.
+
+📖 **Full documentation:** [docs/ZMQ.md](docs/ZMQ.md) — message format, code examples (Python & Node.js), verification steps, and configuration details.
 
 ## ravend Reference
 
