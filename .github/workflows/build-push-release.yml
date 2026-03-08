@@ -60,6 +60,7 @@ jobs:
         with:
           context: .
           push: true
+          build-args: RAVENCOIN_TAG=${{ steps.meta.outputs.tag }}
           tags: |
             dramirezrt/ravencoin-core-server:${{ steps.meta.outputs.tag }}
             ${{ steps.latest.outputs.is_latest == 'true' && 'dramirezrt/ravencoin-core-server:latest' || '' }}
@@ -69,19 +70,11 @@ jobs:
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
             org.opencontainers.image.source=https://github.com/dramirezRT/rvn-core-server-docker
 
-      - name: Extract Ravencoin version from Dockerfile
-        id: rvn
-        run: |
-          RVN_TAG=$(grep -oP 'ARG RAVENCOIN_TAG=\K.*' Dockerfile)
-          echo "tag=$RVN_TAG" >> "$GITHUB_OUTPUT"
-          echo "Ravencoin version from Dockerfile: $RVN_TAG"
-
       - name: Fetch upstream release notes
         id: upstream
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
-          RVN_TAG="${{ steps.rvn.outputs.tag }}"
-          BODY=$(curl -sf "https://api.github.com/repos/RavenProject/Ravencoin/releases/tags/${RVN_TAG}" \
+          BODY=$(curl -sf "https://api.github.com/repos/RavenProject/Ravencoin/releases/tags/${TAG}" \
             | jq -r '.body // empty' 2>/dev/null || true)
 
           {
@@ -95,7 +88,7 @@ jobs:
             echo "### Docker Image Changes"
             echo "- Base image: Ubuntu 22.04 LTS"
             echo "- Built from source with ZMQ support"
-            echo "- Ravencoin Core: ${RVN_TAG}"
+            echo "- Ravencoin Core: ${TAG}"
             echo ""
             if [ -n "$BODY" ]; then
               echo "### Upstream Ravencoin Changes"
@@ -105,7 +98,7 @@ jobs:
             fi
             echo "---"
             echo ""
-            echo "**Full upstream release:** https://github.com/RavenProject/Ravencoin/releases/tag/${RVN_TAG}"
+            echo "**Full upstream release:** https://github.com/RavenProject/Ravencoin/releases/tag/${TAG}"
             echo "RELEASE_EOF"
           } >> "$GITHUB_OUTPUT"
 
