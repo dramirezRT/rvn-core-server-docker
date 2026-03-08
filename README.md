@@ -163,22 +163,6 @@ The `DOCKER_HUB_TOKEN` secret must be set in the repository settings.
 
 ## ZMQ Notifications
 
-Ravencoin Core v4.6.1 supports ZMQ (ZeroMQ) pub/sub notifications for real-time event streaming. This is useful for building block explorers, wallets, ElectrumX servers, and other downstream services that need to react to new blocks and transactions without polling the RPC.
-
-### Supported Topics
-
-| Topic | Port (default) | Payload | Verified | Description |
-|-------|---------------|---------|----------|-------------|
-| `hashblock` | 28332 | 32-byte block hash | ✅ | Published when a new block is connected to the chain |
-| `hashtx` | 28333 | 32-byte tx hash | ✅ | Published for each transaction added to the mempool or included in a block |
-| `rawblock` | 28332 | Full serialized block | ✅ | Full raw block data (can be large) |
-| `rawtx` | 28333 | Full serialized transaction | ✅ | Full raw transaction data |
-| `rawmessage` | — | — | ❌ | Not functional in Ravencoin Core v4.6.1 |
-
-> **Note:** The `getzmqnotifications` RPC (available in Bitcoin Core) is **not ported** to Ravencoin Core v4.6.1. ZMQ is configured exclusively via `raven.conf` or command-line flags. There is no RPC method to query active ZMQ endpoints at runtime.
-
-### Enabling ZMQ
-
 ZMQ is **disabled by default**. Enable all topics with a single flag:
 
 ```bash
@@ -189,54 +173,16 @@ docker run -d \
   ...
 ```
 
-This enables all 4 functional topics on fixed ports:
-- **Port 28332** — `hashblock`, `hashtx` (hash-based notifications)
-- **Port 28333** — `rawblock`, `rawtx` (full serialized data)
+| Topic | Port | Verified | Description |
+|-------|------|----------|-------------|
+| `hashblock` | 28332 | ✅ | New block hash |
+| `hashtx` | 28332 | ✅ | New transaction hash |
+| `rawblock` | 28333 | ✅ | Full serialized block |
+| `rawtx` | 28333 | ✅ | Full serialized transaction |
 
-### ZMQ Message Format
+> **Note:** `getzmqnotifications` RPC is not available in Ravencoin Core v4.6.1.
 
-Each ZMQ message is a multi-part message with 3 frames:
-
-| Frame | Content | Example |
-|-------|---------|---------|
-| 1 | Topic string | `hashblock` |
-| 2 | Payload (binary) | 32-byte hash or serialized block/tx |
-| 3 | Sequence number (4-byte LE uint32) | `0` (resets on restart) |
-
-### Example: Python ZMQ Subscriber
-
-```python
-import zmq
-
-ctx = zmq.Context()
-sock = ctx.socket(zmq.SUB)
-sock.connect("tcp://localhost:28332")
-sock.setsockopt_string(zmq.SUBSCRIBE, "hashblock")
-
-while True:
-    topic, body, seq = sock.recv_multipart()
-    block_hash = body.hex()
-    sequence = int.from_bytes(seq, "little")
-    print(f"New block: {block_hash} (seq={sequence})")
-```
-
-### Verifying ZMQ
-
-Since there is no `getzmqnotifications` RPC, verify ZMQ is working by:
-
-1. **Check listening ports** inside the container:
-   ```bash
-   docker exec rvn-node cat /proc/net/tcp | awk '$4=="0A"' | awk '{print $2}' | cut -d: -f2 | while read h; do printf "%d\n" "0x$h"; done | sort -n
-   # Should show 28332 and/or 28333
-   ```
-
-2. **Subscribe and wait for a message** (see Python example above)
-
-3. **Check the binary has ZMQ support:**
-   ```bash
-   docker exec rvn-node ldd /usr/local/bin/ravend | grep zmq
-   # Should show: libzmq.so.5 => /lib/x86_64-linux-gnu/libzmq.so.5
-   ```
+📖 **Full documentation:** [docs/ZMQ.md](docs/ZMQ.md) — message format, code examples (Python & Node.js), verification steps, and configuration details.
 
 ## ravend Reference
 
