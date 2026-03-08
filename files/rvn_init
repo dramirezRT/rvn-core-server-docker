@@ -120,12 +120,16 @@ function check_env_vars() {
 function init() {
     # Check for environment variables
     check_env_vars
-    # Start node front-end
-    local app_dir=${HOME_DIR}/nodejs-app/
-    setup_nodejs || return 1
-    pushd $app_dir 
-    node index.js &
-    popd
+    # Start node front-end (skip if FRONTEND=false, e.g. when using external dashboard)
+    if [ "${FRONTEND}" != "false" ]; then
+        local app_dir=${HOME_DIR}/nodejs-app/
+        setup_nodejs || return 1
+        pushd $app_dir 
+        node index.js &
+        popd
+    else
+        echo "Frontend disabled (FRONTEND=false). Skipping built-in dashboard."
+    fi
     # Create status file
     touch $HOME_DIR/node_status.log
     # Setup transmission for bootstrap file
