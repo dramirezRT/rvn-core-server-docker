@@ -24,6 +24,14 @@ function bootstrap_node() {
     local extraction_dir=$KOTN_DIR/raven-dir/
     local transmission_dir=$HOME_DIR/.config/transmission-daemon/
     local bootstrap_done="bootstrap.done"
+    # If the bootstrap file already exists locally (e.g. after a container restart),
+    # trigger transmission to verify it so it transitions to "Done" without re-downloading.
+    local existing_file=$(find ${download_dir} -type f -name "rvn-bootstrap*tar.gz" 2>/dev/null)
+    if [ -n "${existing_file}" ]; then
+        echo -e "$(date) - Bootstrap file found locally, triggering transmission verify..." > $HOME_DIR/bootstrap-status.log
+        transmission-remote localhost -n transmission:transmission -t all --verify
+    fi
+
     while [ ! "$(transmission-remote localhost -n transmission:transmission -l | grep "rvn-bootstrap.*.tar.gz" | awk '{print $5}')" = "Done" ];
     do
         echo -e "$(date) - Waiting for bootstrap file to finish downloading..." > $HOME_DIR/bootstrap-status.log
