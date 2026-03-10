@@ -62,7 +62,7 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    jq curl wget gawk sed vim tree \
+    jq curl wget gawk sed vim tree pv \
     libzmq5 libevent-2.1-7 libevent-pthreads-2.1-7 libminiupnpc17 \
     libboost-system1.74.0 libboost-filesystem1.74.0 \
     libboost-chrono1.74.0 libboost-program-options1.74.0 \
@@ -82,10 +82,12 @@ VOLUME [ "/kingofthenorth/" ]
 COPY ./files/rvn_init /usr/local/bin/raven_init
 COPY ./files/raven_status /usr/local/bin/raven_status
 COPY ./files/entrypoint /usr/local/bin/entrypoint
+COPY ./files/create_snapshot /usr/local/bin/create_snapshot
 
 RUN chmod +x /usr/local/bin/raven_init && \
     chmod +x /usr/local/bin/raven_status && \
-    chmod +x /usr/local/bin/entrypoint
+    chmod +x /usr/local/bin/entrypoint && \
+    chmod +x /usr/local/bin/create_snapshot
 
 COPY --chown=kingofthenorth:kingofthenorth ./files/raven.conf /home/kingofthenorth/.raven/
 
@@ -94,6 +96,7 @@ RUN mkdir -p /home/kingofthenorth/.config/transmission-daemon/seeding
 
 COPY --chown=kingofthenorth:kingofthenorth ./files/transmission.settings.json /home/kingofthenorth/.config/transmission-daemon/settings.json
 COPY --chown=kingofthenorth:kingofthenorth ./files/rvn-bootstrap.md5 /home/kingofthenorth/.config/transmission-daemon/seeding/
+COPY --chown=kingofthenorth:kingofthenorth ./files/rvn-bootstrap.sha512 /home/kingofthenorth/.config/transmission-daemon/seeding/
 COPY --chown=kingofthenorth:kingofthenorth ./files/rvn-bootstrap*.tar.gz.torrent /home/kingofthenorth/.config/transmission-daemon/seeding/
 
 # Setup nodejs app

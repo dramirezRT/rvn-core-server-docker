@@ -184,6 +184,48 @@ docker run -d \
 
 📖 **Full documentation:** [docs/ZMQ.md](docs/ZMQ.md) — message format, code examples (Python & Node.js), verification steps, and configuration details.
 
+## Blockchain Snapshots (Bootstrap)
+
+Bootstrap snapshots allow a fresh node to skip years of chain download and sync in hours instead of weeks.
+
+On first start the container uses BitTorrent (transmission) to download the bootstrap archive, verify its integrity, and extract it before launching `ravend`.
+
+### Available Snapshots
+
+| File | Date | Compressed Size | Uncompressed | Chain Coverage |
+|------|------|----------------|--------------|----------------|
+| `rvn-bootstrap-08232022.tar.gz` | Aug 23 2022 | ~22 GB | ~30 GB | Genesis → Aug 2022 |
+
+> **Estimated sizes for a current snapshot (2025–2026):**
+> Chain data is approximately **~45 GB uncompressed** (blocks ~43 GB, chainstate ~1.8 GB, assets ~10 MB).
+> Expect a compressed snapshot of roughly **38–42 GB**.
+
+### Integrity Verification
+
+All snapshots are verified before extraction. The node image ships with:
+- `rvn-bootstrap.sha512` — SHA512 checksums (used for all new snapshots)
+- `rvn-bootstrap.md5` — MD5 legacy checksum (used as fallback for the 2022 snapshot)
+
+If both files are present, SHA512 takes precedence.
+
+### Creating a New Snapshot
+
+The snapshot tool ships **inside the container** — no host dependencies needed:
+
+```bash
+docker exec rvn-node create_snapshot
+```
+
+The script:
+1. Sets a maintenance lock so ravend does not restart mid-backup
+2. Stops `ravend` gracefully via `raven-cli stop`
+3. Archives `assets/`, `blocks/`, `chainstate/` with live `pv` progress
+4. Generates a SHA512 checksum and appends it to `rvn-bootstrap.sha512`
+5. Creates a `.torrent` file (2 MiB piece size, DHT, no tracker required)
+6. Removes the maintenance lock — `ravend` restarts automatically
+
+After running, follow the printed next-steps to commit the new `.torrent` and updated `rvn-bootstrap.sha512` to the repo and open a PR.
+
 ## ravend Reference
 
 Full `ravend --help` output is available at [ravend-help.log](ravend-help.log).

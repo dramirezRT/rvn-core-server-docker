@@ -1,0 +1,148 @@
+#!/bin/bash
+# create_snapshot — Ravencoin blockchain snapshot creator (runs inside the container)
+#
+# Usage:
+#   docker exec rvn-node create_snapshot
+#
+# The script:
+#   1. Sets a maintenance lock so ravend does not restart after stopping
+#   2. Stops ravend gracefully via raven-cli
+#   3. Compresses assets/ blocks/ chainstate/ with progress via pv
+#   4. Generates a SHA512 checksum and appends it to rvn-bootstrap.sha512
+#   5. Creates a .torrent file via transmission-create
+#   6. Removes the maintenance lock — ravend restarts automatically
+#
+# Output files land in /kingofthenorth/bootstrap-seed/ (host bind-mount).
+# After running, copy the new .torrent and rvn-bootstrap.sha512 into the
+# repo's files/ directory and open a PR.
+
+set -euo pipefail
+
+DATA_DIR="/kingofthenorth/raven-dir"
+SEED_DIR="/kingofthenorth/bootstrap-seed"
+SEEDING_DIR="/home/kingofthenorth/.config/transmission-daemon/seeding"
+MAINTENANCE_LOCK="/kingofthenorth/maintenance.lock"
+TORRENT_COMMENT="Ravencoin Bootstrap file. Look for the sha512 in https://github.com/dramirezRT/rvn-core-server-docker/tree/main/files"
+PIECE_SIZE_POW=21   # 2^21 = 2 MiB
+
+DATE=$(date +%m%d%Y)
+SNAPSHOT_NAME="rvn-bootstrap-${DATE}.tar.gz"
+TORRENT_NAME="${SNAPSHOT_NAME}.torrent"
+SNAPSHOT_PATH="${SEED_DIR}/${SNAPSHOT_NAME}"
+TORRENT_PATH="${SEED_DIR}/${TORRENT_NAME}"
+CHECKSUM_FILE="${SEEDING_DIR}/rvn-bootstrap.sha512"
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+# ── Sanity checks ─────────────────────────────────────────────────────────────
+if [[ -f "${SNAPSHOT_PATH}" ]]; then
+    echo "ERROR: snapshot already exists for today: ${SNAPSHOT_PATH}"
+    echo "Remove it first or wait until tomorrow."
+    exit 1
+fi
+
+if [[ -f "${MAINTENANCE_LOCK}" ]]; then
+    echo "ERROR: maintenance.lock already exists — another snapshot may be running."
+    exit 1
+fi
+
+# ── Stop ravend ───────────────────────────────────────────────────────────────
+log "Setting maintenance lock — ravend will not restart after stopping..."
+touch "${MAINTENANCE_LOCK}"
+
+log "Stopping ravend gracefully..."
+if pgrep -x ravend > /dev/null; then
+    raven-cli stop 2>/dev/null || true
+    for i in $(seq 1 60); do
+        pgrep -x ravend > /dev/null || break
+        printf "\r  Waiting for ravend to stop... (%ds)" "$i"
+        sleep 1
+    done
+    printf "\n"
+    if pgrep -x ravend > /dev/null; then
+        log "ravend did not stop in time, sending SIGTERM..."
+        pkill -TERM ravend || true
+        sleep 5
+    fi
+else
+    log "ravend is not running, skipping stop."
+fi
+log "ravend stopped."
+
+# ── Snapshot ──────────────────────────────────────────────────────────────────
+cleanup() {
+    log "Interrupted — removing maintenance lock so ravend can restart."
+    rm -f "${MAINTENANCE_LOCK}"
+    rm -f "${SNAPSHOT_PATH}"   # remove partial file
+}
+trap cleanup INT TERM
+
+log "Creating snapshot: ${SNAPSHOT_NAME}"
+log "  Source:  ${DATA_DIR}/{assets,blocks,chainstate}"
+log "  Output:  ${SNAPSHOT_PATH}"
+
+TOTAL_BYTES=$(LC_ALL=C du -sb "${DATA_DIR}/assets" "${DATA_DIR}/blocks" "${DATA_DIR}/chainstate" 2>/dev/null \
+    | LC_ALL=C awk '{sum+=$1} END {printf "%.0f\n", sum}')
+TOTAL_GB=$(LC_ALL=C awk "BEGIN {printf \"%.1f\", ${TOTAL_BYTES}/1073741824}")
+log "  Uncompressed input: ~${TOTAL_GB} GB"
+
+if command -v pv &>/dev/null; then
+    log "  Using pv for progress..."
+    tar cz -C "${DATA_DIR}" assets/ blocks/ chainstate/ \
+        | pv -f -s "${TOTAL_BYTES}" -N "compressing" \
+        > "${SNAPSHOT_PATH}"
+else
+    log "  pv not found — printing file size every 30s..."
+    tar czf "${SNAPSHOT_PATH}" -C "${DATA_DIR}" assets/ blocks/ chainstate/ &
+    TAR_PID=$!
+    while kill -0 "${TAR_PID}" 2>/dev/null; do
+        sleep 30
+        [[ -f "${SNAPSHOT_PATH}" ]] && \
+            printf "  [%s] Written: %.2f GB compressed\n" \
+                "$(date '+%H:%M:%S')" \
+                "$(LC_ALL=C awk "BEGIN {printf \"%.2f\", $(stat -c%s "${SNAPSHOT_PATH}" 2>/dev/null || echo 0)/1073741824}")"
+    done
+    wait "${TAR_PID}"
+fi
+
+SNAPSHOT_SIZE=$(du -sh "${SNAPSHOT_PATH}" | cut -f1)
+log "Snapshot complete: ${SNAPSHOT_SIZE} compressed"
+
+# ── Checksum ──────────────────────────────────────────────────────────────────
+log "Generating SHA512 checksum..."
+pushd "${SEED_DIR}" > /dev/null
+sha512sum "${SNAPSHOT_NAME}" | tee -a "${CHECKSUM_FILE}"
+# Also copy updated checksum file to seed dir (alongside torrent) for distribution
+cp "${CHECKSUM_FILE}" "${SEED_DIR}/rvn-bootstrap.sha512"
+popd > /dev/null
+log "Checksum appended to ${CHECKSUM_FILE}"
+
+# ── Torrent ───────────────────────────────────────────────────────────────────
+log "Creating torrent file (hashing pieces, may take a few minutes)..."
+transmission-create \
+    -l ${PIECE_SIZE_POW} \
+    -c "${TORRENT_COMMENT}" \
+    -o "${TORRENT_PATH}" \
+    "${SNAPSHOT_PATH}"
+
+# ── Release maintenance lock ──────────────────────────────────────────────────
+trap - INT TERM
+rm -f "${MAINTENANCE_LOCK}"
+log "Maintenance lock removed — ravend will restart automatically."
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Snapshot:  ${SNAPSHOT_PATH}"
+echo "  Torrent:   ${TORRENT_PATH}"
+echo "  Checksums: ${SEED_DIR}/rvn-bootstrap.sha512"
+echo "  Size:      ${SNAPSHOT_SIZE} compressed"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Next steps to publish:"
+echo "  1. cp ${SEED_DIR}/rvn-bootstrap-${DATE}.tar.gz.torrent <repo>/files/"
+echo "  2. cp ${SEED_DIR}/rvn-bootstrap.sha512 <repo>/files/"
+echo "  3. Add torrent to transmission:"
+echo "       transmission-remote localhost -n transmission:transmission \\"
+echo "         --add ${SEED_DIR}/${TORRENT_NAME}"
+echo "  4. Open a PR against dramirezRT/rvn-core-server-docker"
