@@ -192,3 +192,8 @@ Full `ravend --help` output is available at [ravend-help.log](ravend-help.log).
 
 - **RVN:** RFxiRVE8L7MHVYfNP2X9eMMKUPk83uYfpZ
 - **FLUX:** t1ZsWHkFRfutSMCY1KPyk35k2pkNJ2GPjPU
+
+## Related Projects
+
+- [RVN-Electrumx-docker](https://github.com/dramirezRT/RVN-Electrumx-docker) — ElectrumX server that connects to this node as its ravend backend
+- [rvn-node-frontend-docker](https://github.com/dramirezRT/rvn-node-frontend-docker) — Real-time dashboard powered by this node's ZMQ and RPC endpoints
