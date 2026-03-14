@@ -14,7 +14,7 @@ docker pull dramirezrt/ravencoin-core-server:latest
 
 | Tag | Ravencoin Core | Base Image | ZMQ | Notes |
 |-----|---------------|------------|-----|-------|
-| `v4.6.1` | 4.6.1 | Ubuntu 22.04 | ✅ | Built from source |
+| `v2.4` | 4.6.1 | Ubuntu 22.04 | ✅ | Built from source |
 | `v2.3.1` | — | Ubuntu 20.04 | ❌ | Legacy (pre-built binary) |
 | `v2.3` | — | Ubuntu 20.04 | ❌ | Legacy |
 | `v2.0` | — | Ubuntu 20.04 | ❌ | Legacy |
@@ -41,8 +41,8 @@ docker pull dramirezrt/ravencoin-core-server:latest
 
 ```bash
 docker run -d \
-  -v ~/raven-node/kingofthenorth/:/kingofthenorth \
-  -v /home/kingofthenorth \
+  -v ~/raven-node/kingofthenorth:/kingofthenorth \
+  -v ~/raven-node/home:/home/kingofthenorth \
   -p 31413:31413/tcp \
   -p 31413:31413/udp \
   -p 38767:38767 \
@@ -54,8 +54,8 @@ docker run -d \
 
 ```bash
 docker run -d \
-  -v ~/raven-node/kingofthenorth/:/kingofthenorth \
-  -v /home/kingofthenorth \
+  -v ~/raven-node/kingofthenorth:/kingofthenorth \
+  -v ~/raven-node/home:/home/kingofthenorth \
   -e UPNP=true \
   --net=host \
   --name rvn-node dramirezrt/ravencoin-core-server:latest
@@ -65,8 +65,8 @@ docker run -d \
 
 ```bash
 docker run -d \
-  -v ~/raven-node/kingofthenorth/:/kingofthenorth \
-  -v /home/kingofthenorth \
+  -v ~/raven-node/kingofthenorth:/kingofthenorth \
+  -v ~/raven-node/home:/home/kingofthenorth \
   -e ZMQ=true \
   -p 38767:38767 \
   -p 28332:28332 \
@@ -79,8 +79,8 @@ docker run -d \
 
 ```bash
 docker run -d \
-  -v ~/raven-node/kingofthenorth/:/kingofthenorth \
-  -v /home/kingofthenorth \
+  -v ~/raven-node/kingofthenorth:/kingofthenorth \
+  -v ~/raven-node/home:/home/kingofthenorth \
   -e UPNP=true \
   -e RAVEN_PORT=8767 \
   -e TRANSMISSION_PORT=51413 \
@@ -117,7 +117,36 @@ docker run -d \
 | Path | Purpose |
 |------|---------|
 | `/kingofthenorth/` | Blockchain data and bootstrap files (persistent) |
-| `/home/kingofthenorth/` | Application home directory |
+| `/home/kingofthenorth/` | Node home directory — config, transmission settings, logs |
+
+### Persisting Configuration Across Rebuilds
+
+`raven.conf` and other node settings live in `/home/kingofthenorth/` inside the container.  
+By default this directory is ephemeral — it resets on every container rebuild/recreate.
+
+To persist it, mount it as either a **host path** or a **named volume**:
+
+**Option A — Host path** (recommended; config files are directly accessible on the host):
+```bash
+docker run -d \
+  -v ~/raven-node/kingofthenorth:/kingofthenorth \
+  -v /path/on/host/home:/home/kingofthenorth \
+  --name rvn-node dramirezrt/ravencoin-core-server:latest
+```
+> On first run the container will populate `/path/on/host/home` from the image. Edit `raven.conf` there directly.
+
+**Option B — Named volume** (managed by Docker; survives image updates without a host path):
+```bash
+docker volume create rvn-node-home
+
+docker run -d \
+  -v ~/raven-node/kingofthenorth:/kingofthenorth \
+  -v rvn-node-home:/home/kingofthenorth \
+  --name rvn-node dramirezrt/ravencoin-core-server:latest
+```
+> Inspect or edit files with: `docker run --rm -v rvn-node-home:/data alpine sh`
+
+Without either option, any changes to `raven.conf` (custom RPC credentials, ZMQ endpoints, port overrides, etc.) will be lost when the container is removed or the image is rebuilt.
 
 ## Build From Source
 
@@ -183,6 +212,47 @@ docker run -d \
 > **Note:** `getzmqnotifications` RPC is not available in Ravencoin Core v4.6.1.
 
 📖 **Full documentation:** [docs/ZMQ.md](docs/ZMQ.md) — message format, code examples (Python & Node.js), verification steps, and configuration details.
+
+## Blockchain Snapshots (Bootstrap)
+
+Bootstrap snapshots allow a fresh node to skip years of chain download and sync in hours instead of weeks.
+
+On first start the container uses BitTorrent (transmission) to download the bootstrap archive, verify its integrity, and extract it before launching `ravend`.
+
+### Available Snapshots
+
+| File | Date | Compressed Size | Uncompressed | Chain Coverage | Torrent |
+|------|------|----------------|--------------|----------------|---------|
+| `rvn-bootstrap-08232022.tar.gz` | Aug 23 2022 | ~22 GB | ~30 GB | Genesis → Aug 2022 | `rvn-bootstrap-08232022.tar.gz.torrent` |
+| `rvn-bootstrap-03142026.tar.gz` | Mar 14 2026 | ~32 GB | ~45 GB | Genesis → Mar 2026 | `rvn-bootstrap-03142026.tar.gz.torrent` |
+
+Both snapshots ship with their checksums in `rvn-bootstrap.sha512` (SHA512) and `rvn-bootstrap.md5` (MD5, legacy 2022 snapshot only). On first start the container automatically picks the latest snapshot available in `rvn-bootstrap.sha512`.
+
+### Integrity Verification
+
+All snapshots are verified before extraction. The node image ships with:
+- `rvn-bootstrap.sha512` — SHA512 checksums (used for all new snapshots)
+- `rvn-bootstrap.md5` — MD5 legacy checksum (used as fallback for the 2022 snapshot)
+
+If both files are present, SHA512 takes precedence.
+
+### Creating a New Snapshot
+
+The snapshot tool ships **inside the container** — no host dependencies needed:
+
+```bash
+docker exec rvn-node create_snapshot
+```
+
+The script:
+1. Sets a maintenance lock so ravend does not restart mid-backup
+2. Stops `ravend` gracefully via `raven-cli stop`
+3. Archives `assets/`, `blocks/`, `chainstate/` with live `pv` progress
+4. Generates a SHA512 checksum and appends it to `rvn-bootstrap.sha512`
+5. Creates a `.torrent` file (2 MiB piece size, DHT, no tracker required)
+6. Removes the maintenance lock — `ravend` restarts automatically
+
+After running, follow the printed next-steps to commit the new `.torrent` and updated `rvn-bootstrap.sha512` to the repo and open a PR.
 
 ## ravend Reference
 

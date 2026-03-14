@@ -46,12 +46,23 @@ function bootstrap_node() {
     fi
 
     echo -e "$(date) - Verifying the bootstrap file integrity..." > $HOME_DIR/bootstrap-status.log
-    cp ${transmission_dir}/seeding/rvn-bootstrap.md5 ${download_dir}
     pushd $download_dir &> /dev/null
-    if ! md5sum -c rvn-bootstrap.md5 --status --ignore-missing; then
-        echo -e "$(date) - ERROR: Failed to verify the MD5 checksum of the downloaded bootstrap file!" > $HOME_DIR/bootstrap-status.log
-        popd &> /dev/null
-        return 1
+    if [ -f "${transmission_dir}/seeding/rvn-bootstrap.sha512" ]; then
+        cp ${transmission_dir}/seeding/rvn-bootstrap.sha512 ${download_dir}
+        if ! sha512sum -c rvn-bootstrap.sha512 --status --ignore-missing; then
+            echo -e "$(date) - ERROR: SHA512 checksum verification failed for bootstrap file!" > $HOME_DIR/bootstrap-status.log
+            popd &> /dev/null
+            return 1
+        fi
+    elif [ -f "${transmission_dir}/seeding/rvn-bootstrap.md5" ]; then
+        cp ${transmission_dir}/seeding/rvn-bootstrap.md5 ${download_dir}
+        if ! md5sum -c rvn-bootstrap.md5 --status --ignore-missing; then
+            echo -e "$(date) - ERROR: MD5 checksum verification failed for bootstrap file!" > $HOME_DIR/bootstrap-status.log
+            popd &> /dev/null
+            return 1
+        fi
+    else
+        echo -e "$(date) - WARNING: No checksum file found, skipping integrity check..." >> $HOME_DIR/bootstrap-status.log
     fi
     popd &> /dev/null
 
@@ -145,15 +156,34 @@ function init() {
     # Start bootstraping the node
     bootstrap_node || { sleep 600 && return 2; }
     # Start ravencoin daemon
+    # Supports maintenance mode: if /kingofthenorth/maintenance.lock exists,
+    # ravend will not be started/restarted until the lock is removed.
+    # Used by create_snapshot to pause ravend for a clean backup.
     local ravend_done="${KOTN_DIR}/raven-dir/ravend-reindex.done"
-    if [ -f "${ravend_done}" ]; then
-        echo -e "${ravend_done} file found. Running ravend..."
-        ravend || return 3
-    else
-        touch $ravend_done
-        echo -e "${ravend_done} file NOT found. Running ravend and reindexing chain..."
-        ravend -reindex || return 4
-    fi
+    local maintenance_lock="${KOTN_DIR}/maintenance.lock"
+    while true; do
+        while [ -f "${maintenance_lock}" ]; do
+            echo -e "$(date) - Maintenance mode active, ravend paused. Waiting..."
+            sleep 10
+        done
+
+        local exit_code
+        if [ -f "${ravend_done}" ]; then
+            echo -e "${ravend_done} file found. Running ravend..."
+            ravend; exit_code=$?
+        else
+            touch $ravend_done
+            echo -e "${ravend_done} file NOT found. Running ravend and reindexing chain..."
+            ravend -reindex; exit_code=$?
+        fi
+
+        if [ $exit_code -ne 0 ]; then
+            echo -e "$(date) - ravend exited with error code ${exit_code}, stopping container."
+            return $exit_code
+        fi
+        echo -e "$(date) - ravend stopped gracefully. Checking maintenance mode before restart..."
+        sleep 5
+    done
 }
 
 $1
