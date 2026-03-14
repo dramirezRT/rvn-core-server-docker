@@ -5,3 +5,4 @@
 # To verify manually:
 #   sha512sum -c rvn-bootstrap.sha512 --ignore-missing
 39e4a4b0503a29c3e2cd00e74e42707908e1eaacd5532d0e71c8f669c12c960dcbebaa48f3017593240d7d7102ad079e60c32e6523853dcc44b276f000dfabda  rvn-bootstrap-08232022.tar.gz
+4a46b192b0809d9dd8ec70a1d98cb60feb2f24d848667746afb49ac726cde39a6ce001be1d84eb87f6dc424d4d78ba6d26345eee5c79abd290305b3b03da9f5a  rvn-bootstrap-03142026.tar.gz
