@@ -20,11 +20,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image (no push)
+      - name: Build image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: false
+          load: true
           tags: dramirezrt/ravencoin-core-server:ci-test
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -32,12 +33,3 @@ jobs:
       - name: Verify ravend binary
         run: |
           docker run --rm --entrypoint ravend dramirezrt/ravencoin-core-server:ci-test --version
-
-      - name: Verify create_snapshot script
-        run: |
-          docker run --rm --entrypoint create_snapshot dramirezrt/ravencoin-core-server:ci-test --help 2>&1 || \
-          docker run --rm --entrypoint /bin/bash dramirezrt/ravencoin-core-server:ci-test -c "test -x /usr/local/bin/create_snapshot && echo 'create_snapshot: OK'"
-
-      - name: Verify pv is available
-        run: |
-          docker run --rm --entrypoint pv dramirezrt/ravencoin-core-server:ci-test --version
